@@ -1,7 +1,7 @@
 name: guandan
 description: "掼蛋 - Online multiplayer card game"
 publish_to: 'none'
-version: 1.0.2+2
+version: 1.0.3+3
 
 environment:
   sdk: ^3.10.7

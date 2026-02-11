@@ -51,7 +51,10 @@ void main() {
       final combo = ComboDetector.detect([c('SJ')], level);
       expect(combo, isNotNull);
       expect(combo!.type, ComboType.single);
-      expect(combo.primaryRank, 15);
+      expect(combo.primaryRank, 98); // SJ effective rank
+
+      final bj = ComboDetector.detect([c('BJ')], level);
+      expect(bj!.primaryRank, 99); // BJ effective rank
     });
 
     test('single level card has effective rank 20', () {
@@ -457,6 +460,21 @@ void main() {
       final s2 = ComboDetector.detect([c('s3')], level)!;
       expect(ComboDetector.canBeat(s1, s2), true);
       expect(ComboDetector.canBeat(s2, s1), false);
+    });
+
+    test('joker single beats level card single', () {
+      // When level is 2, a single 2 has effective rank 20
+      // But small joker (98) and big joker (99) must beat it
+      final levelCard = ComboDetector.detect([c('s2')], Rank.two)!;
+      final smallJoker = ComboDetector.detect([c('SJ')], Rank.two)!;
+      final bigJoker = ComboDetector.detect([c('BJ')], Rank.two)!;
+
+      expect(ComboDetector.canBeat(smallJoker, levelCard), true);
+      expect(ComboDetector.canBeat(bigJoker, levelCard), true);
+      expect(ComboDetector.canBeat(bigJoker, smallJoker), true);
+      expect(ComboDetector.canBeat(levelCard, smallJoker), false);
+      expect(ComboDetector.canBeat(levelCard, bigJoker), false);
+      expect(ComboDetector.canBeat(smallJoker, bigJoker), false);
     });
 
     test('bomb beats any non-bomb', () {

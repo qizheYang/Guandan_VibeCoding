@@ -52,9 +52,11 @@ class GameCard {
   bool get isJoker => rank.isJoker;
 
   /// Effective rank for comparison given current level.
-  /// Level card becomes 20 (highest non-joker).
+  /// Big Joker (99) > Small Joker (98) > Level card (20) > A(14) > ... > 2(2)
   int effectiveRank(Rank currentLevel) {
-    if (!isJoker && rank == currentLevel) return 20;
+    if (rank == Rank.bigJoker) return 99;
+    if (rank == Rank.smallJoker) return 98;
+    if (rank == currentLevel) return 20;
     return rank.value;
   }
 

@@ -62,12 +62,33 @@ void main() {
       expect(card.effectiveRank(Rank.two), 14);
     });
 
-    test('effectiveRank for jokers returns face value', () {
+    test('effectiveRank for jokers returns high values above level card', () {
       final sj = GameCard(rank: Rank.smallJoker, deckIndex: 0);
-      expect(sj.effectiveRank(Rank.two), 15);
+      expect(sj.effectiveRank(Rank.two), 98);
 
       final bj = GameCard(rank: Rank.bigJoker, deckIndex: 0);
-      expect(bj.effectiveRank(Rank.two), 16);
+      expect(bj.effectiveRank(Rank.two), 99);
+
+      // Jokers always beat level cards (level card = 20)
+      final levelCard = GameCard(suit: Suit.spade, rank: Rank.two, deckIndex: 0);
+      expect(sj.effectiveRank(Rank.two), greaterThan(levelCard.effectiveRank(Rank.two)));
+      expect(bj.effectiveRank(Rank.two), greaterThan(levelCard.effectiveRank(Rank.two)));
+    });
+
+    test('effectiveRank ordering: BJ > SJ > level > A > K > ... > 2', () {
+      const level = Rank.two;
+      final bj = GameCard(rank: Rank.bigJoker, deckIndex: 0);
+      final sj = GameCard(rank: Rank.smallJoker, deckIndex: 0);
+      final levelCard = GameCard(suit: Suit.spade, rank: Rank.two, deckIndex: 0);
+      final ace = GameCard(suit: Suit.spade, rank: Rank.ace, deckIndex: 0);
+      final king = GameCard(suit: Suit.spade, rank: Rank.king, deckIndex: 0);
+      final three = GameCard(suit: Suit.spade, rank: Rank.three, deckIndex: 0);
+
+      expect(bj.effectiveRank(level), greaterThan(sj.effectiveRank(level)));
+      expect(sj.effectiveRank(level), greaterThan(levelCard.effectiveRank(level)));
+      expect(levelCard.effectiveRank(level), greaterThan(ace.effectiveRank(level)));
+      expect(ace.effectiveRank(level), greaterThan(king.effectiveRank(level)));
+      expect(king.effectiveRank(level), greaterThan(three.effectiveRank(level)));
     });
 
     test('isWild returns true only for heart suit + current level', () {
