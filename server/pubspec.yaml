@@ -9,3 +9,6 @@ environment:
 dependencies:
   guandan_shared:
     path: ../shared
+
+dev_dependencies:
+  test: ^1.25.0

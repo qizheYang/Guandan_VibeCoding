@@ -198,6 +198,7 @@ class GameEngine {
     }
 
     // Advance the winning team
+    final beforeValue = teamLevels[firstTeam]!.value;
     final newLevel = _advanceLevel(teamLevels[firstTeam]!, advancement);
     teamLevels[firstTeam] = newLevel;
 
@@ -205,8 +206,9 @@ class GameEngine {
         teamLevels.map((k, v) => MapEntry(k, v.value)));
 
     // Check if game is over (past Ace)
+    // _advanceLevel caps at Ace, so check raw arithmetic instead
     int? winner;
-    if (newLevel.value > Rank.ace.value) {
+    if (beforeValue + advancement > Rank.ace.value) {
       winner = firstTeam;
       phase = GamePhase.gameEnd;
     }
