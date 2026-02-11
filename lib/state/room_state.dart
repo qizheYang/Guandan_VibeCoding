@@ -27,6 +27,14 @@ class RoomState extends ChangeNotifier {
   }
 
   void _handleMessage(ServerMsg msg) {
+    try {
+      _processMessage(msg);
+    } catch (e) {
+      print('[RoomState] Error handling ${msg.type}: $e');
+    }
+  }
+
+  void _processMessage(ServerMsg msg) {
     switch (msg.type) {
       case 'roomCreated':
         roomCode = msg.payload['roomCode'] as String;

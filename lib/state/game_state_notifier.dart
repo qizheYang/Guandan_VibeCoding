@@ -73,6 +73,16 @@ class GameStateNotifier extends ChangeNotifier {
   }
 
   void _handleMessage(ServerMsg msg) {
+    try {
+      _processMessage(msg);
+    } catch (e) {
+      print('[GameState] Error handling ${msg.type}: $e');
+      errorMessage = 'Message error: $e';
+      notifyListeners();
+    }
+  }
+
+  void _processMessage(ServerMsg msg) {
     switch (msg.type) {
       case 'yourTurn':
         isMyTurn = true;
@@ -96,6 +106,15 @@ class GameStateNotifier extends ChangeNotifier {
         cardCounts[seat] = count;
         passedThisTrick = {0: false, 1: false, 2: false, 3: false};
         trickWinnerSeat = null;
+
+        // Update currentTrick from what was just played
+        final comboType = msg.payload['comboType'] as String?;
+        if (comboType != null) {
+          final combo = ComboDetector.detect(cards, currentLevel ?? Rank.two);
+          if (combo != null) {
+            currentTrick = combo;
+          }
+        }
 
         // If it was me, remove cards from hand
         if (seat == mySeatIndex) {

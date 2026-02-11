@@ -1,6 +1,6 @@
 name: guandan_server
 description: Guan Dan WebSocket game server
-version: 0.1.0
+version: 0.1.1
 publish_to: 'none'
 
 environment:

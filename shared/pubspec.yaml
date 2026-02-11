@@ -1,6 +1,6 @@
 name: guandan_shared
 description: Shared models, protocol, and engine for Guan Dan
-version: 0.1.0
+version: 0.1.1
 publish_to: 'none'
 
 environment:
