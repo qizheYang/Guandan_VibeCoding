@@ -88,6 +88,7 @@ ServerMsg cardsPlayedMsg({
   required List<GameCard> cards,
   required String comboType,
   required int cardCount,
+  required int nextPlayer,
 }) =>
     ServerMsg(type: 'cardsPlayed', payload: {
       'playerId': playerId,
@@ -95,24 +96,29 @@ ServerMsg cardsPlayedMsg({
       'cards': cards.map((c) => c.key).toList(),
       'comboType': comboType,
       'cardCount': cardCount,
+      'nextPlayer': nextPlayer,
     });
 
 ServerMsg playerPassedMsg({
   required String playerId,
   required int seatIndex,
+  required int nextPlayer,
 }) =>
     ServerMsg(type: 'playerPassed', payload: {
       'playerId': playerId,
       'seatIndex': seatIndex,
+      'nextPlayer': nextPlayer,
     });
 
 ServerMsg trickWonMsg({
   required String winnerId,
   required int winnerSeat,
+  required int nextPlayer,
 }) =>
     ServerMsg(type: 'trickWon', payload: {
       'winnerId': winnerId,
       'winnerSeat': winnerSeat,
+      'nextPlayer': nextPlayer,
     });
 
 ServerMsg playerFinishedMsg({

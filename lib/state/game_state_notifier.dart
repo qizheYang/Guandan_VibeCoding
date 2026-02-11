@@ -122,17 +122,21 @@ class GameStateNotifier extends ChangeNotifier {
             myHand.remove(card);
           }
           selectedIndices = {};
-          isMyTurn = false;
         }
+
+        // Derive turn from broadcast nextPlayer field
+        final nextPlayer = msg.payload['nextPlayer'] as int?;
+        isMyTurn = nextPlayer == mySeatIndex;
         notifyListeners();
 
       case 'playerPassed':
         final seat = msg.payload['seatIndex'] as int;
         passedThisTrick[seat] = true;
         lastPlayedCards[seat] = null;
-        if (seat == mySeatIndex) {
-          isMyTurn = false;
-        }
+
+        // Derive turn from broadcast nextPlayer field
+        final nextPassPlayer = msg.payload['nextPlayer'] as int?;
+        isMyTurn = nextPassPlayer == mySeatIndex;
         notifyListeners();
 
       case 'trickWon':
@@ -145,6 +149,10 @@ class GameStateNotifier extends ChangeNotifier {
           lastPlayedCards[i] = null;
           passedThisTrick[i] = false;
         }
+
+        // Derive turn from broadcast nextPlayer field
+        final nextTrickPlayer = msg.payload['nextPlayer'] as int?;
+        isMyTurn = nextTrickPlayer == mySeatIndex;
         notifyListeners();
 
       case 'playerFinished':

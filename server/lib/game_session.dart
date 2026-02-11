@@ -164,14 +164,16 @@ class GameSession {
 
     try {
       final combo = engine!.playCards(seat, cards);
+      print('[playCards] seat=$seat played ${combo.type.name} (${cards.length} cards), next=${engine!.currentPlayer}');
 
-      // Broadcast the play
+      // Broadcast the play (include nextPlayer so all clients know whose turn it is)
       _broadcast(cardsPlayedMsg(
         playerId: conn.playerId!,
         seatIndex: seat,
         cards: cards,
         comboType: combo.type.name,
         cardCount: engine!.hands[seat].length,
+        nextPlayer: engine!.currentPlayer,
       ));
 
       // Check if player finished
@@ -202,8 +204,20 @@ class GameSession {
       }
 
       // Next player's turn
-      _sendTurnNotification();
-    } catch (e) {
+      try {
+        _sendTurnNotification();
+        print('[playCards] yourTurn sent to seat ${engine!.currentPlayer}');
+      } catch (e2) {
+        print('[playCards] ERROR sending turn notification: $e2');
+        // Still try to send turn via a simpler message
+        final current = engine!.currentPlayer;
+        seats[current]?.send(yourTurnMsg(
+          currentTrick: null,
+          consecutivePasses: engine!.consecutivePasses,
+        ));
+      }
+    } catch (e, st) {
+      print('[playCards] ERROR: $e\n$st');
       conn.send(errorMsg(message: '$e'));
     }
   }
@@ -225,6 +239,7 @@ class GameSession {
       _broadcast(playerPassedMsg(
         playerId: conn.playerId!,
         seatIndex: seat,
+        nextPlayer: engine!.currentPlayer,
       ));
 
       // Check if trick was won (currentTrick became null)
@@ -232,6 +247,7 @@ class GameSession {
         _broadcast(trickWonMsg(
           winnerId: playerIds[engine!.currentPlayer] ?? '',
           winnerSeat: engine!.currentPlayer,
+          nextPlayer: engine!.currentPlayer,
         ));
       }
 
