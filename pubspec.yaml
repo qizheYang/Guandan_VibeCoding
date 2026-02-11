@@ -1,7 +1,7 @@
 name: guandan
 description: "掼蛋 - Online multiplayer card game"
 publish_to: 'none'
-version: 1.0.5+5
+version: 1.0.6+6
 
 environment:
   sdk: ^3.10.7
@@ -12,6 +12,7 @@ dependencies:
   web_socket_channel: ^3.0.3
   provider: ^6.1.2
   flutter_svg: ^2.0.17
+  url_launcher: ^6.3.1
   guandan_shared:
     path: shared
 

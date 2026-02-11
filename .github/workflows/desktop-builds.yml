@@ -1,0 +1,122 @@
+name: Build Desktop Apps
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build macOS app
+        run: |
+          flutter build macos --release \
+            --dart-define=WS_URL=wss://rehydratedwater.com/guandan-ws \
+            --dart-define=BUILD_TIME="$(date -u '+%Y-%m-%d %H:%M UTC')"
+
+      - name: Zip macOS app
+        run: |
+          cd build/macos/Build/Products/Release
+          zip -r -y guandan-macos.zip guandan.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guandan-macos
+          path: build/macos/Build/Products/Release/guandan-macos.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build Windows app
+        run: |
+          flutter build windows --release `
+            --dart-define=WS_URL=wss://rehydratedwater.com/guandan-ws `
+            --dart-define=BUILD_TIME="CI"
+
+      - name: Zip Windows app
+        run: |
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath guandan-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guandan-windows
+          path: guandan-windows.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
+
+      - run: flutter pub get
+
+      - name: Build Linux app
+        run: |
+          flutter build linux --release \
+            --dart-define=WS_URL=wss://rehydratedwater.com/guandan-ws \
+            --dart-define=BUILD_TIME="$(date -u '+%Y-%m-%d %H:%M UTC')"
+
+      - name: Tar Linux app
+        run: |
+          cd build/linux/x64/release/bundle
+          tar -czf guandan-linux.tar.gz *
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guandan-linux
+          path: build/linux/x64/release/bundle/guandan-linux.tar.gz
+
+  release:
+    needs: [build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create or update release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: latest
+          name: Latest Desktop Builds
+          body: |
+            Auto-built desktop apps for 掼蛋 (Guan Dan).
+            Connect to the same server as the web version.
+
+            - **macOS**: Download `guandan-macos.zip`, unzip, and run `guandan.app`
+            - **Windows**: Download `guandan-windows.zip`, unzip, and run `guandan.exe`
+            - **Linux**: Download `guandan-linux.tar.gz`, extract, and run `./guandan`
+          artifacts: "artifacts/**/*"
+          allowUpdates: true
+          makeLatest: true
+          prerelease: false

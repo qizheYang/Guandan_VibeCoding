@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../build_info.dart';
 import '../../services/ws_client.dart';
@@ -280,6 +282,42 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
 
                   const SizedBox(height: 32),
+                  if (kIsWeb) ...[
+                    Text(
+                      '下载桌面版',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _DownloadChip(
+                          icon: Icons.apple,
+                          label: 'macOS',
+                          url:
+                              'https://github.com/qizheYang/Guandan_VibeCoding/releases/latest/download/guandan-macos.zip',
+                        ),
+                        const SizedBox(width: 12),
+                        _DownloadChip(
+                          icon: Icons.window,
+                          label: 'Windows',
+                          url:
+                              'https://github.com/qizheYang/Guandan_VibeCoding/releases/latest/download/guandan-windows.zip',
+                        ),
+                        const SizedBox(width: 12),
+                        _DownloadChip(
+                          icon: Icons.desktop_windows,
+                          label: 'Linux',
+                          url:
+                              'https://github.com/qizheYang/Guandan_VibeCoding/releases/latest/download/guandan-linux.tar.gz',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   Text(
                     'v$appVersion${buildTime == 'dev' ? '' : ' · $buildTime'}',
                     style: TextStyle(
@@ -293,6 +331,29 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DownloadChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String url;
+
+  const _DownloadChip({
+    required this.icon,
+    required this.label,
+    required this.url,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionChip(
+      avatar: Icon(icon, size: 16, color: Colors.white70),
+      label: Text(label, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+      backgroundColor: Colors.white.withValues(alpha: 0.1),
+      side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+      onPressed: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
     );
   }
 }
