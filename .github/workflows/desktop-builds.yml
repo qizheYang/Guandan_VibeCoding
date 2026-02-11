@@ -103,6 +103,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: true
 
       - name: Create or update release
         uses: ncipollo/release-action@v1
@@ -116,7 +117,7 @@ jobs:
             - **macOS**: Download `guandan-macos.zip`, unzip, and run `guandan.app`
             - **Windows**: Download `guandan-windows.zip`, unzip, and run `guandan.exe`
             - **Linux**: Download `guandan-linux.tar.gz`, extract, and run `./guandan`
-          artifacts: "artifacts/**/*"
+          artifacts: "artifacts/*"
           allowUpdates: true
           makeLatest: true
           prerelease: false
