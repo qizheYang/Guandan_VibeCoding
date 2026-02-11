@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../build_info.dart';
 import '../../state/room_state.dart';
 import 'room_screen.dart';
 
@@ -228,6 +229,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       }
                       return const SizedBox.shrink();
                     },
+                  ),
+
+                  const SizedBox(height: 32),
+                  Text(
+                    'v$appVersion${buildTime == 'dev' ? '' : ' · $buildTime'}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.35),
+                    ),
                   ),
                 ],
               ),
