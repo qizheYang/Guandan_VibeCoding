@@ -356,6 +356,185 @@ void main() {
       await c.close();
     }
   }, timeout: Timeout(Duration(seconds: 30)));
+  test('nextPlayer field in broadcasts enables client-side turn derivation', () async {
+    // This test verifies that cardsPlayed, playerPassed, and trickWon
+    // all include a nextPlayer field, and that clients can derive whose
+    // turn it is purely from these broadcasts (without yourTurn unicast).
+
+    final clients = <_TestClient>[];
+    for (final name in ['A', 'B', 'C', 'D']) {
+      clients.add(await connectClient(name));
+    }
+
+    // Setup room
+    clients[0].send({'type': 'createRoom', 'payload': {'playerName': 'A'}});
+    final rc = await clients[0].waitFor('roomCreated');
+    final code = rc['roomCode'] as String;
+
+    for (int i = 1; i < 4; i++) {
+      clients[i].send({
+        'type': 'joinRoom',
+        'payload': {'roomCode': code, 'playerName': clients[i].name},
+      });
+      await clients[i].waitFor('roomJoined');
+    }
+
+    for (final c in clients) {
+      await c.waitFor('seatsAssigned');
+    }
+
+    final seatMap = <int, _TestClient>{};
+    for (final c in clients) {
+      seatMap[c.seatIndex!] = c;
+    }
+
+    // All ready
+    for (final c in clients) {
+      c.send({'type': 'ready', 'payload': {}});
+    }
+
+    // Get game start info
+    final hands = <int, List<GameCard>>{};
+    int firstPlayer = -1;
+    for (final c in clients) {
+      final gs = await c.waitFor('gameStart');
+      final seat = c.seatIndex!;
+      hands[seat] = (gs['yourHand'] as List).cast<String>().map(GameCard.fromKey).toList();
+      firstPlayer = gs['firstPlayer'] as int;
+    }
+
+    // Drain yourTurn for first player
+    await seatMap[firstPlayer]!.waitFor('yourTurn');
+
+    int currentSeat = firstPlayer;
+
+    // === Turn 1: First player plays a single card ===
+    final playedSeat1 = currentSeat;
+    final card1 = hands[currentSeat]!.first;
+    seatMap[currentSeat]!.send({
+      'type': 'playCards',
+      'payload': {'cardKeys': [card1.key]},
+    });
+
+    // Verify ALL clients receive cardsPlayed with nextPlayer
+    int? expectedNext;
+    for (final c in clients) {
+      final cp = await c.waitFor('cardsPlayed');
+      expect(cp.containsKey('nextPlayer'), isTrue,
+          reason: 'cardsPlayed must contain nextPlayer');
+      final nextPlayer = cp['nextPlayer'] as int;
+      expect(nextPlayer, isNot(playedSeat1),
+          reason: 'nextPlayer should differ from who just played');
+      if (expectedNext == null) {
+        expectedNext = nextPlayer;
+      } else {
+        expect(nextPlayer, expectedNext,
+            reason: 'All clients must agree on nextPlayer');
+      }
+    }
+    currentSeat = expectedNext!;
+    hands[firstPlayer]!.remove(card1);
+
+    // Drain yourTurn (still sent by server, but we test nextPlayer is reliable)
+    seatMap[currentSeat]!.checkPending('yourTurn');
+    // If not pending yet, drain it
+    try {
+      await seatMap[currentSeat]!.waitFor('yourTurn',
+          timeout: Duration(milliseconds: 500));
+    } catch (_) {}
+
+    print('Turn 1: seat $firstPlayer played, nextPlayer=$currentSeat ✓');
+
+    // === Turn 2: Next player passes ===
+    final passedSeat = currentSeat;
+    seatMap[currentSeat]!.send({'type': 'pass', 'payload': {}});
+
+    int? expectedNext2;
+    for (final c in clients) {
+      final pp = await c.waitFor('playerPassed');
+      expect(pp.containsKey('nextPlayer'), isTrue,
+          reason: 'playerPassed must contain nextPlayer');
+      final nextPlayer = pp['nextPlayer'] as int;
+      expect(nextPlayer, isNot(passedSeat),
+          reason: 'nextPlayer should differ from who just passed');
+      if (expectedNext2 == null) {
+        expectedNext2 = nextPlayer;
+      } else {
+        expect(nextPlayer, expectedNext2,
+            reason: 'All clients must agree on nextPlayer after pass');
+      }
+    }
+    currentSeat = expectedNext2!;
+
+    // Drain yourTurn
+    try {
+      await seatMap[currentSeat]!.waitFor('yourTurn',
+          timeout: Duration(milliseconds: 500));
+    } catch (_) {}
+
+    print('Turn 2: seat $passedSeat passed, nextPlayer=$currentSeat ✓');
+
+    // === Turn 3: Next player passes ===
+    final passedSeat2 = currentSeat;
+    seatMap[currentSeat]!.send({'type': 'pass', 'payload': {}});
+
+    int? expectedNext3;
+    for (final c in clients) {
+      final pp = await c.waitFor('playerPassed');
+      expect(pp.containsKey('nextPlayer'), isTrue,
+          reason: 'playerPassed must contain nextPlayer');
+      final nextPlayer = pp['nextPlayer'] as int;
+      if (expectedNext3 == null) {
+        expectedNext3 = nextPlayer;
+      } else {
+        expect(nextPlayer, expectedNext3);
+      }
+    }
+    currentSeat = expectedNext3!;
+
+    print('Turn 3: seat $passedSeat2 passed, nextPlayer=$currentSeat ✓');
+
+    // Drain yourTurn
+    try {
+      await seatMap[currentSeat]!.waitFor('yourTurn',
+          timeout: Duration(milliseconds: 500));
+    } catch (_) {}
+
+    // === Turn 4: Last player passes → trick won, trickWon broadcast ===
+    seatMap[currentSeat]!.send({'type': 'pass', 'payload': {}});
+
+    // Should get playerPassed and then trickWon
+    for (final c in clients) {
+      final pp = await c.waitFor('playerPassed');
+      expect(pp.containsKey('nextPlayer'), isTrue);
+    }
+
+    // trickWon should follow
+    int? expectedNextTrick;
+    for (final c in clients) {
+      final tw = await c.waitFor('trickWon');
+      expect(tw.containsKey('nextPlayer'), isTrue,
+          reason: 'trickWon must contain nextPlayer');
+      final nextPlayer = tw['nextPlayer'] as int;
+      final winnerSeat = tw['winnerSeat'] as int;
+      expect(nextPlayer, winnerSeat,
+          reason: 'Trick winner should be next player');
+      if (expectedNextTrick == null) {
+        expectedNextTrick = nextPlayer;
+      } else {
+        expect(nextPlayer, expectedNextTrick,
+            reason: 'All clients must agree on nextPlayer after trickWon');
+      }
+    }
+    currentSeat = expectedNextTrick!;
+
+    print('Turn 4: trick won by seat $currentSeat, nextPlayer=$currentSeat ✓');
+    print('All broadcast messages contain correct nextPlayer field!');
+
+    for (final c in clients) {
+      await c.close();
+    }
+  }, timeout: Timeout(Duration(seconds: 30)));
 }
 
 int _nextActiveSeat(int current) => (current + 1) % 4;
