@@ -1,0 +1,16 @@
+[Unit]
+Description=Guan Dan WebSocket Game Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/guandan-server
+ExecStart=/var/www/guandan-server/bin/guandan_server
+Environment=PORT=8082
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

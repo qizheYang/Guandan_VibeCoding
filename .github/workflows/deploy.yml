@@ -1,0 +1,89 @@
+name: Build and Deploy to rehydratedwater.com
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build web app
+        run: |
+          BUILD_VERSION="1.0.0.$(git rev-list --count HEAD)"
+          BUILD_TIME=$(date -u '+%Y-%m-%d %H:%M UTC')
+          flutter build web --base-href "/guandan/" --release \
+            --dart-define=WS_URL=wss://rehydratedwater.com/guandan-ws \
+            --dart-define=BUILD_VERSION=$BUILD_VERSION \
+            --dart-define=BUILD_TIME="$BUILD_TIME"
+
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          repository: qizheYang/rehydratedwater.com
+          token: ${{ secrets.REHYDRATEDWATERCOM }}
+          path: target-repo
+
+      - name: Deploy web build to target repo
+        run: |
+          rm -rf target-repo/guandan
+          cp -r build/web target-repo/guandan
+          cd target-repo
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add guandan
+          git commit -m "Auto-deploy guandan from Guandan_VibeCoding" || echo "No changes to commit"
+          git push
+
+      - name: Deploy server via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            SERVER_DIR=/var/www/guandan-server
+
+            # Update server source from the guandan repo
+            cd /tmp
+            rm -rf guandan-server-update
+            git clone --depth 1 https://github.com/qizheYang/Guandan_VibeCoding.git guandan-server-update
+
+            # Sync shared package
+            mkdir -p $SERVER_DIR/shared/lib/{models,protocol,engine}
+            cp guandan-server-update/shared/pubspec.yaml $SERVER_DIR/shared/pubspec.yaml
+            cp guandan-server-update/shared/lib/guandan_shared.dart $SERVER_DIR/shared/lib/
+            cp guandan-server-update/shared/lib/models/*.dart $SERVER_DIR/shared/lib/models/
+            cp guandan-server-update/shared/lib/protocol/*.dart $SERVER_DIR/shared/lib/protocol/
+            cp guandan-server-update/shared/lib/engine/*.dart $SERVER_DIR/shared/lib/engine/
+
+            # Sync server files
+            mkdir -p $SERVER_DIR/{bin,lib}
+            cp guandan-server-update/server/bin/server.dart $SERVER_DIR/bin/server.dart
+            cp guandan-server-update/server/lib/*.dart $SERVER_DIR/lib/
+
+            # Fix shared path in pubspec (../shared -> shared)
+            sed 's|path: ../shared|path: shared|' guandan-server-update/server/pubspec.yaml > $SERVER_DIR/pubspec.yaml
+
+            # Clean up
+            rm -rf guandan-server-update
+
+            # Rebuild and restart
+            cd $SERVER_DIR
+            dart pub get
+            dart compile exe bin/server.dart -o bin/guandan_server_new
+            mv bin/guandan_server_new bin/guandan_server
+            systemctl restart guandan-server

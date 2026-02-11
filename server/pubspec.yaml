@@ -1,0 +1,11 @@
+name: guandan_server
+description: Guan Dan WebSocket game server
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  guandan_shared:
+    path: ../shared
