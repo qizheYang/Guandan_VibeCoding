@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../build_info.dart';
+import '../../services/ws_client.dart';
 import '../../state/room_state.dart';
 import 'room_screen.dart';
 
@@ -16,15 +19,32 @@ class _HomeScreenState extends State<HomeScreen> {
   final _nameController = TextEditingController(text: '');
   final _codeController = TextEditingController();
   String? _error;
+  bool _wsConnected = false;
+  StreamSubscription<bool>? _connSub;
+
+  @override
+  void initState() {
+    super.initState();
+    final ws = context.read<WsClient>();
+    _wsConnected = ws.isConnected;
+    _connSub = ws.connectionStatus.listen((connected) {
+      if (mounted) setState(() => _wsConnected = connected);
+    });
+  }
 
   @override
   void dispose() {
+    _connSub?.cancel();
     _nameController.dispose();
     _codeController.dispose();
     super.dispose();
   }
 
   void _createRoom() {
+    if (!_wsConnected) {
+      setState(() => _error = '正在连接服务器...');
+      return;
+    }
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       setState(() => _error = '请输入昵称');
@@ -36,6 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _joinRoom() {
+    if (!_wsConnected) {
+      setState(() => _error = '正在连接服务器...');
+      return;
+    }
     final name = _nameController.text.trim();
     final code = _codeController.text.trim();
     if (name.isEmpty) {
@@ -100,6 +124,30 @@ class _HomeScreenState extends State<HomeScreen> {
                       letterSpacing: 4,
                     ),
                   ),
+                  if (!_wsConnected) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '连接服务器中...',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 48),
 
                   // Name input
