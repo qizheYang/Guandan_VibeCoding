@@ -59,6 +59,20 @@ class RoomState extends ChangeNotifier {
         readyStatus[seat] = false;
         notifyListeners();
 
+      case 'seatsAssigned':
+        final playerList = (msg.payload['players'] as List)
+            .map((p) => Player.fromJson(p as Map<String, dynamic>))
+            .toList();
+        players = List.filled(4, null);
+        readyStatus = List.filled(4, false);
+        for (final p in playerList) {
+          players[p.seatIndex] = p;
+          if (p.id == myPlayerId) {
+            mySeatIndex = p.seatIndex;
+          }
+        }
+        notifyListeners();
+
       case 'playerReady':
         final pid = msg.payload['playerId'] as String;
         for (int i = 0; i < 4; i++) {

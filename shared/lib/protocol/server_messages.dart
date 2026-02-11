@@ -139,5 +139,10 @@ ServerMsg tributePhaseMsg({
 ServerMsg gameOverMsg({required int winningTeam}) =>
     ServerMsg(type: 'gameOver', payload: {'winningTeam': winningTeam});
 
+ServerMsg seatsAssignedMsg({required List<Player> players}) =>
+    ServerMsg(type: 'seatsAssigned', payload: {
+      'players': players.map((p) => p.toJson()).toList(),
+    });
+
 ServerMsg errorMsg({required String message}) =>
     ServerMsg(type: 'error', payload: {'message': message});

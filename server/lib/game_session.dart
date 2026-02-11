@@ -72,6 +72,11 @@ class GameSession {
         conn.send(playerReadyMsg(playerId: playerIds[i]!));
       }
     }
+
+    // When all 4 players are present, randomly shuffle seats
+    if (_allPresent()) {
+      _shuffleSeats();
+    }
   }
 
   void removePlayer(ClientConnection conn) {
@@ -268,6 +273,46 @@ class GameSession {
           ? engine!.finishOrder.indexOf(i) + 1
           : null,
     ));
+  }
+
+  void _shuffleSeats() {
+    final rng = Random();
+    // Collect current players
+    final conns = <ClientConnection>[];
+    final ids = <String>[];
+    final names = <String>[];
+    for (int i = 0; i < 4; i++) {
+      conns.add(seats[i]!);
+      ids.add(playerIds[i]!);
+      names.add(playerNames[i]);
+    }
+
+    // Generate a random permutation of [0,1,2,3]
+    final newOrder = [0, 1, 2, 3]..shuffle(rng);
+
+    // Reassign based on shuffle
+    for (int i = 0; i < 4; i++) {
+      final newSeat = newOrder[i];
+      seats[newSeat] = conns[i];
+      playerIds[newSeat] = ids[i];
+      playerNames[newSeat] = names[i];
+      conns[i].seatIndex = newSeat;
+    }
+
+    // Build updated player list and broadcast to all
+    final players = <Player>[];
+    for (int i = 0; i < 4; i++) {
+      players.add(Player(
+        id: playerIds[i]!,
+        name: playerNames[i],
+        seatIndex: i,
+      ));
+    }
+
+    // Send each player the new assignments with their personal seat index
+    for (int i = 0; i < 4; i++) {
+      seats[i]!.send(seatsAssignedMsg(players: players));
+    }
   }
 
   bool _allPresent() => seats.every((s) => s != null);
