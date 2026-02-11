@@ -229,16 +229,13 @@ class _GameBoard extends StatelessWidget {
         // My hand
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: CardFan(
-              cards: game.myHand,
-              selectedIndices: game.selectedIndices,
-              currentLevel: game.currentLevel,
-              onCardTap: game.isMyTurn
-                  ? (index) => game.toggleCardSelection(index)
-                  : null,
-            ),
+          child: CardFan(
+            cards: game.myHand,
+            selectedIndices: game.selectedIndices,
+            currentLevel: game.currentLevel,
+            onCardTap: game.isMyTurn
+                ? (index) => game.toggleCardSelection(index)
+                : null,
           ),
         ),
       ],
